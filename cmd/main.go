@@ -2,18 +2,13 @@ package main
 
 import (
 	"context"
-	"errors"
 	"flag"
 	"log"
 	"net/http"
+	"os"
 
 	"cloud.google.com/go/pubsub"
 	"github.com/jhw0604/StreamLog/handle"
-)
-
-//Errors
-var (
-	ErrNotExistsTopic = errors.New("not exists topic")
 )
 
 //configs
@@ -29,7 +24,8 @@ func main() {
 	ctx, cancle := context.WithCancel(context.Background())
 	client, err := pubsub.NewClient(ctx, *projectID)
 	if err != nil {
-		panic(err)
+		log.Println("pub/sub client can't start", err)
+		os.Exit(1)
 	}
 	defer client.Close()
 
@@ -38,10 +34,12 @@ func main() {
 
 	exists, err := topic.Exists(ctx)
 	if err != nil {
-		panic(err)
+		log.Println("topic exists chacke fail:", err)
+		os.Exit(1)
 	}
 	if !exists {
-		panic(ErrNotExistsTopic)
+		log.Println("not exists topic")
+		os.Exit(1)
 	}
 
 	svr := http.Server{
@@ -61,11 +59,12 @@ func main() {
 	go func() {
 		err = svr.ListenAndServe()
 		if err != nil && err != http.ErrServerClosed {
-			panic(err)
+			log.Println("server brocked:", err)
+			os.Exit(1)
 		}
 	}()
 
-	log.Println("Server Started.")
+	log.Println("server started")
 	<-ctx.Done()
-	log.Println("Server stoped.")
+	log.Println("server stoped")
 }
